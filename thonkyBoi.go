@@ -34,6 +34,7 @@ func checkOB(timeslotID uint64) bool {
 	return false
 }
 
+// Is a timeslotID registered for WS
 func checkWS(timeslotID uint64) bool {
 	var wsData webStudioData
 	res, err := http.Get("https://ury.org.uk/webstudio/api/v1/status")
@@ -56,11 +57,16 @@ func checkWS(timeslotID uint64) bool {
 	return false
 }
 
+// Is this time coming up soon
 func checkTimeSoon(t time.Time) bool {
 	return t.Add(time.Duration(-59) * time.Minute).Before(time.Now())
 }
 
 func main() {
+
+	/*
+		Start Logging
+	*/
 
 	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 
@@ -75,6 +81,10 @@ func main() {
 	log.Println("Software Startup for Upcoming Transition")
 
 	log.Println("Starting API Session and Getting Data")
+
+	/*
+		API Calling Stuff
+	*/
 
 	session, err := myradio.NewSession("*****") // Timelord Key
 	if err != nil {
@@ -98,6 +108,10 @@ func main() {
 
 	currentSel := selInfo.Studio
 
+	/*
+		Catch-All Statements
+	*/
+
 	if currentSel == offAirSource {
 		// Off Air
 		log.Println("Currently Off-Air - No SEL Commands to Issue\n")
@@ -116,13 +130,16 @@ func main() {
 		return
 	}
 
-	var commands [3]int
-
 	/*
-	   At 59:45, leave alone, unless jukebox either does a news, or going into a show
+		Starting to Create Command Sequence
 	*/
 
 	log.Println("Starting Decisioning Process")
+	var commands [3]int
+
+	/*
+	   59:45 Transition
+	*/
 
 	if checkOB(timeslotInfo.Current.Id) {
 		commands[0] = wsSource
@@ -133,7 +150,7 @@ func main() {
 	}
 
 	/*
-		On the hour, leave alone, unless show going into jukebox or WS
+		00:00 Transition
 	*/
 
 	if currentSel == studioRedSource || currentSel == studioBlueSource {
@@ -145,7 +162,7 @@ func main() {
 	}
 
 	/*
-		At 02:02, only change if needed (into/out of jukebox)
+		02:02 Transition and Studio Check
 	*/
 
 	var needToCheck bool
@@ -159,6 +176,10 @@ func main() {
 	}
 
 	log.Println("Finished Decisioning Process\n")
+
+	/*
+		Logging the Proposed Plan, and checking its been decided in time
+	*/
 
 	log.Println("Upcoming SEL Commands")
 	t := [3]string{"59:45", "00:00", "02:02"}
@@ -178,6 +199,10 @@ func main() {
 	time.Sleep(time.Duration(goTime) * time.Second)
 
 	log.Println("Decisioning is OK at -31 seconds for SEL Commands")
+
+	/*
+	   Run Commands
+	*/
 
 	time.Sleep(16 * time.Second)
 	log.Println("Executing 59:45")
@@ -200,6 +225,10 @@ func main() {
 		exec.Command("sel", strconv.Itoa(commands[2]))
 	}
 
+	/*
+	   Executes the Studio Check
+	*/
+
 	if needToCheck {
 		selInfo, err = session.GetSelectorInfo()
 		if err != nil {
@@ -216,6 +245,10 @@ func main() {
 	} else {
 		log.Println("Skipping Studio Check - Not Required")
 	}
+
+	/*
+		End
+	*/
 
 	log.Println("System Shutdown\n")
 
