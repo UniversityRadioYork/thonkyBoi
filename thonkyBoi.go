@@ -64,6 +64,89 @@ func checkWS(timeslotID uint64, wsData webStudioData) bool {
 	return false
 }
 
+func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, currentSel int) ([3]int, bool) {
+	// This stuff below has nice names...that's all I have to say
+
+	var jukeboxNext bool
+
+	jukeboxNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && timeslotInfo.Next.Id == 0) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && timeslotInfo.Current.Id == 0)
+
+	var obNext bool
+
+	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id)) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id))
+
+	var wsNext bool
+
+	wsNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkWS(timeslotInfo.Next.Id, wsData)) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkWS(timeslotInfo.Current.Id, wsData))
+
+	var autoNews [2]bool
+
+	// Middle really isn't a thing we need to worry about, because of catch-all above, except jukebox
+
+	if currentSel == jukeboxSource && jukeboxNext {
+		if newsOnJukebox {
+			autoNews = [2]bool{true, true}
+		}
+	} else {
+		if checkAutonews(timeslotInfo.Current.Id, "END") {
+			autoNews[0] = true
+		}
+
+		if checkAutonews(timeslotInfo.Next.Id, "START") {
+			autoNews[1] = true
+		}
+	}
+
+	var commands [3]int
+
+	/*
+		59:45 Transition
+	*/
+
+	if (currentSel == jukeboxSource || currentSel == obSource) && autoNews == [2]bool{true, true} {
+		commands[0] = wsSource
+	}
+
+	/*
+		00:00 Transition
+	*/
+
+	if currentSel == jukeboxSource && wsNext && !autoNews[1] {
+		commands[1] = wsSource
+	} else if currentSel == obSource && wsNext && !autoNews[1] {
+		commands[1] = wsSource
+	} else if currentSel == wsSource && obNext && !autoNews[1] {
+		commands[1] = obSource
+	} else {
+		if autoNews == [2]bool{true, true} {
+			commands[1] = wsSource
+		} else if wsNext && !autoNews[1] {
+			commands[1] = wsSource
+		}
+	}
+
+	/*
+		02:02 Transition and Studio Check
+	*/
+
+	var needToCheck bool
+
+	if jukeboxNext {
+		commands[2] = jukeboxSource
+	} else if obNext {
+		commands[2] = obSource
+	} else if wsNext {
+		commands[2] = wsSource
+	} else {
+		needToCheck = true
+	}
+
+	return commands, needToCheck
+}
+
 func main() {
 
 	/*
@@ -146,84 +229,7 @@ func main() {
 
 	log.Println("Starting Decisioning Process")
 
-	// This stuff below has nice names...that's all I have to say
-
-	var jukeboxNext bool
-
-	jukeboxNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && timeslotInfo.Next.Id == 0) ||
-		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && timeslotInfo.Current.Id == 0)
-
-	var obNext bool
-
-	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id)) ||
-		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id))
-
-	var wsNext bool
-
-	wsNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkWS(timeslotInfo.Next.Id, wsData)) ||
-		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkWS(timeslotInfo.Current.Id, wsData))
-
-	var autoNews [2]bool
-
-	// Middle really isn't a thing we need to worry about, because of catch-all above, except jukebox
-
-	if currentSel == jukeboxSource && jukeboxNext {
-		if newsOnJukebox {
-			autoNews = [2]bool{true, true}
-		}
-	} else {
-		if checkAutonews(timeslotInfo.Current.Id, "END") {
-			autoNews[0] = true
-		}
-
-		if checkAutonews(timeslotInfo.Next.Id, "START") {
-			autoNews[1] = true
-		}
-	}
-
-	var commands [3]int
-
-	/*
-		59:45 Transition
-	*/
-
-	if (currentSel == jukeboxSource || currentSel == obSource) && autoNews == [2]bool{true, true} {
-		commands[0] = wsSource
-	}
-
-	/*
-		00:00 Transition
-	*/
-
-	if currentSel == jukeboxSource && wsNext && !autoNews[1] {
-		commands[1] = wsSource
-	} else if currentSel == obSource && wsNext && !autoNews[1] {
-		commands[1] = wsSource
-	} else if currentSel == wsSource && obNext && !autoNews[1] {
-		commands[1] = obSource
-	} else {
-		if autoNews == [2]bool{true, true} {
-			commands[1] = wsSource
-		} else if wsNext && !autoNews[1] {
-			commands[1] = wsSource
-		}
-	}
-
-	/*
-		02:02 Transition and Studio Check
-	*/
-
-	var needToCheck bool
-
-	if jukeboxNext {
-		commands[2] = jukeboxSource
-	} else if obNext {
-		commands[2] = obSource
-	} else if wsNext {
-		commands[2] = wsSource
-	} else {
-		needToCheck = true
-	}
+	commands, needToCheck := Decisioning(timeslotInfo, wsData, currentSel)
 
 	log.Println("Finished Decisioning Process\n")
 
