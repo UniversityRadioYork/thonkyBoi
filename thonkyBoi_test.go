@@ -115,7 +115,7 @@ func TestStudiosWSNoAutonewsFirst(t *testing.T) {
 		Current: myradio.Show{Id: 1, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
 		Next:    myradio.Show{Id: 2, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
 	}
-	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{{Timeslotid: 2}}}}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{{Timeslotid: 2, AutoNewsStart: true}}}}
 	var currentSel int = studioRedSource
 	var config thonkyConfigBoi = thonkyConfigBoi{OBShows: []int{}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsEnd: false}}}
 	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
@@ -151,7 +151,7 @@ func TestJukeboxStudiosAutonews(t *testing.T) {
 	}
 	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{{Timeslotid: 2}}}}
 	var currentSel int = jukeboxSource
-	var config thonkyConfigBoi = thonkyConfigBoi{OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsEnd: false}}}
+	var config thonkyConfigBoi = thonkyConfigBoi{OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsEnd: false, AutoNewsStart: true}}}
 	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
 
 	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
@@ -177,7 +177,7 @@ func TestJukeboxStudiosNoAutonews(t *testing.T) {
 }
 
 func TestJukeboxJukeboxAutonews(t *testing.T) {
-	expectedCommands := [3]int{5, 0, 3}
+	expectedCommands := [3]int{5, 5, 3}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 0, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
@@ -211,7 +211,7 @@ func TestJukeboxJukeboxNoAutonews(t *testing.T) {
 }
 
 func TestJukeboxOBAutonews(t *testing.T) {
-	expectedCommands := [3]int{5, 0, 4}
+	expectedCommands := [3]int{5, 5, 4}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 0, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
@@ -245,15 +245,15 @@ func TestJukeboxOBNoAutonews(t *testing.T) {
 }
 
 func TestJukeboxWSAutonews(t *testing.T) {
-	expectedCommands := [3]int{5, 0, 5}
+	expectedCommands := [3]int{5, 5, 5}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 0, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
 		Next:    myradio.Show{Id: 1, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
 	}
-	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{{Timeslotid: 1}}}}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{{Timeslotid: 1, AutoNewsStart: true}}}}
 	var currentSel int = jukeboxSource
-	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsEnd: false}}}
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{}}
 	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
 
 	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {

@@ -14,6 +14,12 @@
 
 * If neccesary, does a check to make sure WS isn't on air
 
+## Instructions
+
+I mean, this needs writing.
+
+* Test with `go test -v`
+
 ## Code Layout (so you can find stuff)
 
 * Imports, Constants, Structs

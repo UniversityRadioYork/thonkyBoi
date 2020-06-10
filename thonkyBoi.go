@@ -50,31 +50,31 @@ type thonkyConfigBoi struct {
 }
 
 func checkManualNews(timeslotID uint64, part string, wsData webStudioData, config thonkyConfigBoi) bool {
-	var toReturn bool = true
+	var toReturn bool
 	if part == "START" {
 		for _, val := range wsData.Payload.Connections {
 			if val.Timeslotid == int(timeslotID) {
-				toReturn = val.AutoNewsStart
+				toReturn = !val.AutoNewsStart
 			}
 		}
 		for _, val := range config.AutonewsRequests {
 			if val.TimeslotID == int(timeslotID) {
-				toReturn = val.AutoNewsStart
+				toReturn = !val.AutoNewsStart
 			}
 		}
 	} else if part == "END" {
 		for _, val := range wsData.Payload.Connections {
 			if val.Timeslotid == int(timeslotID) {
-				toReturn = val.AutoNewsEnd
+				toReturn = !val.AutoNewsEnd
 			}
 		}
 		for _, val := range config.AutonewsRequests {
 			if val.TimeslotID == int(timeslotID) {
-				toReturn = val.AutoNewsEnd
+				toReturn = !val.AutoNewsEnd
 			}
 		}
 	}
-	return !toReturn
+	return toReturn
 }
 
 // Is this time coming up soon
@@ -126,17 +126,15 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 
 	if currentSel == jukeboxSource && jukeboxNext {
 		manualNews = [2]bool{!config.NewsOnJukebox, !config.NewsOnJukebox}
+	} else if (currentSel == studioRedSource || currentSel == studioBlueSource) && (!jukeboxNext && !obNext && !wsNext) {
+		manualNews = [2]bool{true, true}
 	} else {
-		if (currentSel == studioRedSource || currentSel == studioBlueSource) && (!jukeboxNext && !obNext && !wsNext) {
-			manualNews = [2]bool{true, true}
-		} else {
-			if checkManualNews(timeslotInfo.Current.Id, "END", wsData, config) {
-				manualNews[0] = true
-			}
+		if checkManualNews(timeslotInfo.Current.Id, "END", wsData, config) {
+			manualNews[0] = true
+		}
 
-			if checkManualNews(timeslotInfo.Next.Id, "START", wsData, config) {
-				manualNews[1] = true
-			}
+		if checkManualNews(timeslotInfo.Next.Id, "START", wsData, config) {
+			manualNews[1] = true
 		}
 	}
 
@@ -146,7 +144,7 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 		59:45 Transition
 	*/
 
-	if (currentSel == jukeboxSource || currentSel == obSource) && manualNews == [2]bool{false, false} {
+	if (currentSel == jukeboxSource || currentSel == obSource) && (manualNews == [2]bool{false, false}) {
 		commands[0] = wsSource
 	}
 
@@ -154,26 +152,19 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 		00:00 Transition
 	*/
 
-	if currentSel == jukeboxSource {
-		if wsNext && manualNews[1] {
+	if wsNext {
+		if manualNews != [2]bool{true, false} {
 			commands[1] = wsSource
-		} else if obNext && manualNews[1] {
+		}
+
+	} else if obNext {
+		if manualNews == [2]bool{false, false} {
+			commands[1] = wsSource
+		} else if manualNews[1] {
 			commands[1] = obSource
 		}
-	} else if currentSel == obSource {
-		if wsNext && manualNews[1] {
-			commands[1] = wsSource
-		}
-	} else if currentSel == wsSource {
-		if obNext && manualNews[1] {
-			commands[1] = obSource
-		}
-	} else {
-		if wsNext && (manualNews[1] || !manualNews[0]) {
-			commands[1] = wsSource
-		} else if jukeboxNext && !manualNews[0] {
-			commands[1] = wsSource
-		} else if obNext && !manualNews[0] {
+	} else if jukeboxNext {
+		if !manualNews[0] {
 			commands[1] = wsSource
 		}
 	}
