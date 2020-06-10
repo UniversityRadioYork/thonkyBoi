@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"github.com/UniversityRadioYork/myradio-go"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -20,6 +21,7 @@ const (
 	wsSource         = 5
 	offAirSource     = 8
 	logFile          = "thonkyBoi.log"
+	configFile       = "config.json"
 )
 
 type webStudioData struct {
@@ -41,8 +43,32 @@ type thonkyConfigBoi struct {
 	} `json:"autonewsRequests"`
 }
 
-func checkAutonews(timeslotID uint64, part string) bool {
-	return true
+func checkAutonews(timeslotID uint64, part string, wsData webStudioData, config thonkyConfigBoi) bool {
+	var toReturn bool = true
+	if part == "START" {
+		for _, val := range wsData.Payload.Connections {
+			if val.Timeslotid == int(timeslotID) {
+				toReturn = val.AutoNewsStart
+			}
+		}
+		for _, val := range config.AutonewsRequests {
+			if val.TimeslotID == int(timeslotID) {
+				toReturn = val.AutoNewsStart
+			}
+		}
+	} else if part == "FALSE" {
+		for _, val := range wsData.Payload.Connections {
+			if val.Timeslotid == int(timeslotID) {
+				toReturn = val.AutoNewsStart
+			}
+		}
+		for _, val := range config.AutonewsRequests {
+			if val.TimeslotID == int(timeslotID) {
+				toReturn = val.AutoNewsStart
+			}
+		}
+	}
+	return toReturn
 }
 
 // Is this time coming up soon
@@ -50,7 +76,12 @@ func checkTimeSoon(t time.Time) bool {
 	return t.Add(time.Duration(-59) * time.Minute).Before(time.Now())
 }
 
-func checkOB(timeslotID uint64) bool {
+func checkOB(timeslotID uint64, config thonkyConfigBoi) bool {
+	for _, val := range config.OBShows {
+		if val == int(timeslotID) {
+			return true
+		}
+	}
 	return false
 }
 
@@ -64,7 +95,8 @@ func checkWS(timeslotID uint64, wsData webStudioData) bool {
 	return false
 }
 
-func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, currentSel int) ([3]int, bool) {
+// Decisioning is where the decisions get made and the core logic is
+func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, currentSel int, config thonkyConfigBoi) ([3]int, bool) {
 	// This stuff below has nice names...that's all I have to say
 
 	var jukeboxNext bool
@@ -74,8 +106,8 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 
 	var obNext bool
 
-	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id)) ||
-		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id))
+	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id, config)) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id, config))
 
 	var wsNext bool
 
@@ -91,11 +123,11 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 			autoNews = [2]bool{true, true}
 		}
 	} else {
-		if checkAutonews(timeslotInfo.Current.Id, "END") {
+		if checkAutonews(timeslotInfo.Current.Id, "END", wsData, config) {
 			autoNews[0] = true
 		}
 
-		if checkAutonews(timeslotInfo.Next.Id, "START") {
+		if checkAutonews(timeslotInfo.Next.Id, "START", wsData, config) {
 			autoNews[1] = true
 		}
 	}
@@ -166,6 +198,15 @@ func main() {
 		API Calling Stuff
 	*/
 
+	configFile, err := os.Open(configFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer configFile.Close()
+	byteValue, _ := ioutil.ReadAll(configFile)
+	var config thonkyConfigBoi
+	json.Unmarshal(byteValue, &config)
+
 	session, err := myradio.NewSession("*****") // Timelord Key
 	if err != nil {
 		log.Println("Error Starting API Session - Will Exit and Not Issue SEL Commands")
@@ -229,7 +270,7 @@ func main() {
 
 	log.Println("Starting Decisioning Process")
 
-	commands, needToCheck := Decisioning(timeslotInfo, wsData, currentSel)
+	commands, needToCheck := Decisioning(timeslotInfo, wsData, currentSel, config)
 
 	log.Println("Finished Decisioning Process\n")
 
