@@ -14,6 +14,22 @@
 
 * If neccesary, does a check to make sure WS isn't on air
 
+## Code Layout (so you can find stuff)
+
+* Imports, Constants, Structs
+* checkAutonews
+* checkTimeSoon
+* checkOB
+* checkWS
+* main
+    * Start Logging
+    * MyRadio and WebStudio API Calls
+    * Catch-All Statements
+    * Determining bools for next sources and autonewses
+    * Determine the 3 transitions and studioCheck
+    * Logging Plan, and -31 Seconds Readiness Check
+    * Running the Commands
+
 ### Does this need a better readme, because I care about the future of URY computing and the people who may have to deal with this? 
 
 ## No.

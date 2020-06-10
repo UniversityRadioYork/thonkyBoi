@@ -25,9 +25,29 @@ const (
 type webStudioData struct {
 	Payload struct {
 		Connections []struct {
-			Timeslotid int `json:"timeslotid"`
+			Timeslotid    int  `json:"timeslotid"`
+			AutoNewsStart bool `json:"autoNewsStart"`
+			AutoNewsEnd   bool `json:"autoNewsEnd"`
 		} `json:"connections"`
 	} `json:"payload"`
+}
+
+type thonkyConfigBoi struct {
+	OBShows          []int `json:"obShows"`
+	AutonewsRequests []struct {
+		TimeslotID    int  `json:"timeslotID"`
+		AutoNewsStart bool `json:"autoNewsStart"`
+		AutoNewsEnd   bool `json:"autoNewsEnd"`
+	} `json:"autonewsRequests"`
+}
+
+func checkAutonews(timeslotID uint64, part string) bool {
+	return true
+}
+
+// Is this time coming up soon
+func checkTimeSoon(t time.Time) bool {
+	return t.Add(time.Duration(-59) * time.Minute).Before(time.Now())
 }
 
 func checkOB(timeslotID uint64) bool {
@@ -35,31 +55,13 @@ func checkOB(timeslotID uint64) bool {
 }
 
 // Is a timeslotID registered for WS
-func checkWS(timeslotID uint64) bool {
-	var wsData webStudioData
-	res, err := http.Get("https://ury.org.uk/webstudio/api/v1/status")
-	if err != nil {
-		log.Println("Error Requesting WebStudio API - Will Exit and Not Issue SEL Commands")
-		log.Fatal(err)
-	}
-	decoder := json.NewDecoder(res.Body)
-	err = decoder.Decode(&wsData)
-	if err != nil {
-		log.Println("Error Decoding WebStudio API - Will Exit and Not Issue SEL Commands")
-		log.Fatal(err)
-	}
-
+func checkWS(timeslotID uint64, wsData webStudioData) bool {
 	for _, val := range wsData.Payload.Connections {
 		if val.Timeslotid == int(timeslotID) {
 			return true
 		}
 	}
 	return false
-}
-
-// Is this time coming up soon
-func checkTimeSoon(t time.Time) bool {
-	return t.Add(time.Duration(-59) * time.Minute).Before(time.Now())
 }
 
 func main() {
@@ -69,17 +71,12 @@ func main() {
 	*/
 
 	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer file.Close()
-
 	log.SetOutput(file)
-
 	log.Println("Software Startup for Upcoming Transition")
-
 	log.Println("Starting API Session and Getting Data")
 
 	/*
@@ -104,9 +101,22 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Println("Started API Session and Got Data")
+	var wsData webStudioData
+	res, err := http.Get("https://ury.org.uk/webstudio/api/v1/status")
+	if err != nil {
+		log.Println("Error Requesting WebStudio API - Will Exit and Not Issue SEL Commands")
+		log.Fatal(err)
+	}
+	decoder := json.NewDecoder(res.Body)
+	err = decoder.Decode(&wsData)
+	if err != nil {
+		log.Println("Error Decoding WebStudio API - Will Exit and Not Issue SEL Commands")
+		log.Fatal(err)
+	}
 
 	currentSel := selInfo.Studio
+
+	log.Println("Started API Session and Got Data")
 
 	/*
 		Catch-All Statements
@@ -135,28 +145,66 @@ func main() {
 	*/
 
 	log.Println("Starting Decisioning Process")
+
+	// This stuff below has nice names...that's all I have to say
+
+	var jukeboxNext bool
+
+	jukeboxNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && timeslotInfo.Next.Id == 0) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && timeslotInfo.Current.Id == 0)
+
+	var obNext bool
+
+	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id)) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id))
+
+	var wsNext bool
+
+	wsNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkWS(timeslotInfo.Next.Id, wsData)) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkWS(timeslotInfo.Current.Id, wsData))
+
+	var autoNews [2]bool
+
+	// Middle really isn't a thing we need to worry about, because of catch-all above, except jukebox
+
+	if currentSel == jukeboxSource && jukeboxNext {
+		if newsOnJukebox {
+			autoNews = [2]bool{true, true}
+		}
+	} else {
+		if checkAutonews(timeslotInfo.Current.Id, "END") {
+			autoNews[0] = true
+		}
+
+		if checkAutonews(timeslotInfo.Next.Id, "START") {
+			autoNews[1] = true
+		}
+	}
+
 	var commands [3]int
 
 	/*
-	   59:45 Transition
+		59:45 Transition
 	*/
 
-	if checkOB(timeslotInfo.Current.Id) {
+	if (currentSel == jukeboxSource || currentSel == obSource) && autoNews == [2]bool{true, true} {
 		commands[0] = wsSource
-	} else if currentSel == jukeboxSource {
-		if checkTimeSoon(timeslotInfo.Next.StartTime.Local()) || newsOnJukebox {
-			commands[0] = wsSource
-		}
 	}
 
 	/*
 		00:00 Transition
 	*/
 
-	if currentSel == studioRedSource || currentSel == studioBlueSource {
-		if timeslotInfo.Next.Id != 0 && !checkOB(timeslotInfo.Next.Id) && !checkWS(timeslotInfo.Next.Id) {
-			commands[1] = 0
-		} else {
+	if currentSel == jukeboxSource && wsNext && !autoNews[1] {
+		commands[1] = wsSource
+	} else if currentSel == obSource && wsNext && !autoNews[1] {
+		commands[1] = wsSource
+	} else if currentSel == wsSource && obNext && !autoNews[1] {
+		commands[1] = obSource
+	} else {
+		if autoNews == [2]bool{true, true} {
+			commands[1] = wsSource
+		} else if wsNext && !autoNews[1] {
 			commands[1] = wsSource
 		}
 	}
@@ -167,11 +215,13 @@ func main() {
 
 	var needToCheck bool
 
-	if timeslotInfo.Next.Id == 0 || (timeslotInfo.Current.Id == 0 && !checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && newsOnJukebox) { // Jukebox Next (either timeslot or hour)
+	if jukeboxNext {
 		commands[2] = jukeboxSource
-	} else if checkOB(timeslotInfo.Next.Id) { //OB Next
+	} else if obNext {
 		commands[2] = obSource
-	} else if !checkWS(timeslotInfo.Next.Id) && !(timeslotInfo.Current.Id == 0 && !checkTimeSoon(timeslotInfo.Next.StartTime.Local())) { // Not WS and Not Jukebox continuation
+	} else if wsNext {
+		commands[2] = wsSource
+	} else {
 		needToCheck = true
 	}
 
@@ -201,7 +251,7 @@ func main() {
 	log.Println("Decisioning is OK at -31 seconds for SEL Commands")
 
 	/*
-	   Run Commands
+		Run Commands
 	*/
 
 	time.Sleep(16 * time.Second)
@@ -226,7 +276,7 @@ func main() {
 	}
 
 	/*
-	   Executes the Studio Check
+		Executes the Studio Check
 	*/
 
 	if needToCheck {
