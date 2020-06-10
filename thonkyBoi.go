@@ -13,7 +13,6 @@ import (
 )
 
 const (
-	newsOnJukebox    = true
 	studioRedSource  = 1
 	studioBlueSource = 2
 	jukeboxSource    = 3
@@ -24,26 +23,33 @@ const (
 	configFile       = "config.json"
 )
 
+type wsconnection struct {
+	Timeslotid    int  `json:"timeslotid"`
+	AutoNewsStart bool `json:"autoNewsStart"`
+	AutoNewsEnd   bool `json:"autoNewsEnd"`
+}
+
+type wspayload struct {
+	Connections []wsconnection `json:"connections"`
+}
+
 type webStudioData struct {
-	Payload struct {
-		Connections []struct {
-			Timeslotid    int  `json:"timeslotid"`
-			AutoNewsStart bool `json:"autoNewsStart"`
-			AutoNewsEnd   bool `json:"autoNewsEnd"`
-		} `json:"connections"`
-	} `json:"payload"`
+	Payload wspayload `json:"payload"`
+}
+
+type configAutoNews struct {
+	TimeslotID    int  `json:"timeslotID"`
+	AutoNewsStart bool `json:"autoNewsStart"`
+	AutoNewsEnd   bool `json:"autoNewsEnd"`
 }
 
 type thonkyConfigBoi struct {
-	OBShows          []int `json:"obShows"`
-	AutonewsRequests []struct {
-		TimeslotID    int  `json:"timeslotID"`
-		AutoNewsStart bool `json:"autoNewsStart"`
-		AutoNewsEnd   bool `json:"autoNewsEnd"`
-	} `json:"autonewsRequests"`
+	NewsOnJukebox    bool             `json:"newsOnJukebox"`
+	OBShows          []int            `json:"obShows"`
+	AutonewsRequests []configAutoNews `json:"autonewsRequests"`
 }
 
-func checkAutonews(timeslotID uint64, part string, wsData webStudioData, config thonkyConfigBoi) bool {
+func checkManualNews(timeslotID uint64, part string, wsData webStudioData, config thonkyConfigBoi) bool {
 	var toReturn bool = true
 	if part == "START" {
 		for _, val := range wsData.Payload.Connections {
@@ -56,19 +62,19 @@ func checkAutonews(timeslotID uint64, part string, wsData webStudioData, config 
 				toReturn = val.AutoNewsStart
 			}
 		}
-	} else if part == "FALSE" {
+	} else if part == "END" {
 		for _, val := range wsData.Payload.Connections {
 			if val.Timeslotid == int(timeslotID) {
-				toReturn = val.AutoNewsStart
+				toReturn = val.AutoNewsEnd
 			}
 		}
 		for _, val := range config.AutonewsRequests {
 			if val.TimeslotID == int(timeslotID) {
-				toReturn = val.AutoNewsStart
+				toReturn = val.AutoNewsEnd
 			}
 		}
 	}
-	return toReturn
+	return !toReturn
 }
 
 // Is this time coming up soon
@@ -114,21 +120,23 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 	wsNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkWS(timeslotInfo.Next.Id, wsData)) ||
 		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkWS(timeslotInfo.Current.Id, wsData))
 
-	var autoNews [2]bool
+	var manualNews [2]bool
 
 	// Middle really isn't a thing we need to worry about, because of catch-all above, except jukebox
 
 	if currentSel == jukeboxSource && jukeboxNext {
-		if newsOnJukebox {
-			autoNews = [2]bool{true, true}
-		}
+		manualNews = [2]bool{!config.NewsOnJukebox, !config.NewsOnJukebox}
 	} else {
-		if checkAutonews(timeslotInfo.Current.Id, "END", wsData, config) {
-			autoNews[0] = true
-		}
+		if (currentSel == studioRedSource || currentSel == studioBlueSource) && (!jukeboxNext && !obNext && !wsNext) {
+			manualNews = [2]bool{true, true}
+		} else {
+			if checkManualNews(timeslotInfo.Current.Id, "END", wsData, config) {
+				manualNews[0] = true
+			}
 
-		if checkAutonews(timeslotInfo.Next.Id, "START", wsData, config) {
-			autoNews[1] = true
+			if checkManualNews(timeslotInfo.Next.Id, "START", wsData, config) {
+				manualNews[1] = true
+			}
 		}
 	}
 
@@ -138,7 +146,7 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 		59:45 Transition
 	*/
 
-	if (currentSel == jukeboxSource || currentSel == obSource) && autoNews == [2]bool{true, true} {
+	if (currentSel == jukeboxSource || currentSel == obSource) && manualNews == [2]bool{false, false} {
 		commands[0] = wsSource
 	}
 
@@ -146,16 +154,26 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 		00:00 Transition
 	*/
 
-	if currentSel == jukeboxSource && wsNext && !autoNews[1] {
-		commands[1] = wsSource
-	} else if currentSel == obSource && wsNext && !autoNews[1] {
-		commands[1] = wsSource
-	} else if currentSel == wsSource && obNext && !autoNews[1] {
-		commands[1] = obSource
-	} else {
-		if autoNews == [2]bool{true, true} {
+	if currentSel == jukeboxSource {
+		if wsNext && manualNews[1] {
 			commands[1] = wsSource
-		} else if wsNext && !autoNews[1] {
+		} else if obNext && manualNews[1] {
+			commands[1] = obSource
+		}
+	} else if currentSel == obSource {
+		if wsNext && manualNews[1] {
+			commands[1] = wsSource
+		}
+	} else if currentSel == wsSource {
+		if obNext && manualNews[1] {
+			commands[1] = obSource
+		}
+	} else {
+		if wsNext && (manualNews[1] || !manualNews[0]) {
+			commands[1] = wsSource
+		} else if jukeboxNext && !manualNews[0] {
+			commands[1] = wsSource
+		} else if obNext && !manualNews[0] {
 			commands[1] = wsSource
 		}
 	}
@@ -248,19 +266,19 @@ func main() {
 
 	if currentSel == offAirSource {
 		// Off Air
-		log.Println("Currently Off-Air - No SEL Commands to Issue\n")
+		log.Printf("Currently Off-Air - No SEL Commands to Issue\n\n")
 		return
 	}
 
 	if selInfo.Lock != 0 {
 		// Selector Locked
-		log.Println("Selector Locked - Can't Issue SEL Commands\n")
+		log.Printf("Selector Locked - Can't Issue SEL Commands\n\n")
 		return
 	}
 
 	if !checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && timeslotInfo.Current.Id != 0 {
 		// Multi-Hour Show, let them do news (can be WS)
-		log.Println("Multi-Hour Show Continuation - No SEL Commands to Issue\n")
+		log.Printf("Multi-Hour Show Continuation - No SEL Commands to Issue\n\n")
 		return
 	}
 
@@ -272,7 +290,7 @@ func main() {
 
 	commands, needToCheck := Decisioning(timeslotInfo, wsData, currentSel, config)
 
-	log.Println("Finished Decisioning Process\n")
+	log.Printf("Finished Decisioning Process\n\n")
 
 	/*
 		Logging the Proposed Plan, and checking its been decided in time
@@ -284,12 +302,12 @@ func main() {
 	for k, v := range commands {
 		log.Println(t[k], c[v])
 	}
-	log.Println("Studio Check", needToCheck, "\n")
+	log.Printf("Studio Check %v \n\n", needToCheck)
 
 	goTime := 29 - time.Now().Second()
 
 	if goTime < 0 {
-		log.Println("SEL Decision Unclear at -31 Seconds - Possible Failure - Will Exit and Not Issue SEL Commands\n")
+		log.Printf("SEL Decision Unclear at -31 Seconds - Possible Failure - Will Exit and Not Issue SEL Commands\n\n")
 		return
 	}
 
@@ -347,6 +365,6 @@ func main() {
 		End
 	*/
 
-	log.Println("System Shutdown\n")
+	log.Printf("System Shutdown\n\n")
 
 }
