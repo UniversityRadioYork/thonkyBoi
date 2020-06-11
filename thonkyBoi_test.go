@@ -277,3 +277,190 @@ func TestJukeboxWSNoAutonews(t *testing.T) {
 		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
 	}
 }
+
+func TestOBStudiosAutonews(t *testing.T) {
+	expectedCommands := [3]int{5, 0, 0}
+	expectedStudioCheck := true
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 1, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsStart: true}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBStudiosNoAutonewsFirst(t *testing.T) {
+	expectedCommands := [3]int{0, 0, 0}
+	expectedStudioCheck := true
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 1, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 2, AutoNewsEnd: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBStudiosNoAutonewsSecond(t *testing.T) {
+	expectedCommands := [3]int{0, 0, 0}
+	expectedStudioCheck := true
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 1, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsStart: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBJukeboxAutonews(t *testing.T) {
+	expectedCommands := [3]int{5, 5, 3}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 0, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsStart: true}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBJukeboxNoAutonews(t *testing.T) {
+	expectedCommands := [3]int{0, 0, 3}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 0, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 2, AutoNewsEnd: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBOBAutonews(t *testing.T) {
+	expectedCommands := [3]int{5, 5, 4}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 3, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2, 3}, AutonewsRequests: []configAutoNews{}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBOBNoAutonewsFirst(t *testing.T) {
+	expectedCommands := [3]int{0, 0, 4}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 3, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2, 3}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 2, AutoNewsEnd: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBOBNoAutonewsSecond(t *testing.T) {
+	expectedCommands := [3]int{0, 4, 4}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 3, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2, 3}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 3, AutoNewsStart: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBWSAutonews(t *testing.T) {
+	expectedCommands := [3]int{5, 5, 5}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 1, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{wsconnection{Timeslotid: 1, AutoNewsStart: true}}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2, 3}, AutonewsRequests: []configAutoNews{}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBWSNoAutonewsFirst(t *testing.T) {
+	expectedCommands := [3]int{0, 0, 5}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 1, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{wsconnection{Timeslotid: 1, AutoNewsStart: true}}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2, 3}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 2, AutoNewsEnd: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestOBWSNoAutonewsSecond(t *testing.T) {
+	expectedCommands := [3]int{0, 5, 5}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 1, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{wsconnection{Timeslotid: 1, AutoNewsStart: false}}}}
+	var currentSel int = obSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2, 3}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 2, AutoNewsEnd: true}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
