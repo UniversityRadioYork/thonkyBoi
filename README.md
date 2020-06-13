@@ -16,9 +16,17 @@
 
 ## Instructions
 
-I mean, this needs writing.
+### Development and Testing
 
+* Copy `config.json.example` to `config.json`
 * Test with `go test -v`
+
+### Configuartion Usage
+
+* OBShows is an array of timeslot IDs (integers) that will be considered to be a Source 4 OB by the software
+* autoNewsRequests has JSON objects of timeslotID, autoNewsStart and autoNewsEnd to control autonews manually for non WS shows
+* Updates to `config.json.example` should be reflected in the structs towards the start of `thonkyBoi.go`
+* The config file path is a `const` at the start of `thonkyBoi.go`
 
 ## Code Layout (so you can find stuff)
 
@@ -32,15 +40,13 @@ I mean, this needs writing.
     * Start Logging
     * MyRadio and WebStudio API Calls
     * Catch-All Statements
-    * Determining bools for next sources and autonewses
-    * Determine the 3 transitions and studioCheck
+    * Determining bools for next sources and autonewses and the 3 transitions and studioCheck (Decisioning)
     * Logging Plan, and -31 Seconds Readiness Check
     * Running the Commands
 
-### Does this need a better readme, because I care about the future of URY computing and the people who may have to deal with this? 
+### API Thoughts
 
-## No.
+`CurrentAndNext` returns (from `myradio-go`) `myradio.Show` structs, rather than timeslots. This annoyed me when I found this out, because I had (seemingly) coded all of this wrong. But it turns out, the `Show`'s ID in C.a.N. isn't the Show ID, but is instead the timeslot ID. So, this code works, even if the API is questionable.
 
-### But it does need a better readme.
 
 ###### Michael Grace 2020

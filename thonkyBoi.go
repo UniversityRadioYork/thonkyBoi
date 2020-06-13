@@ -19,7 +19,6 @@ const (
 	obSource         = 4
 	wsSource         = 5
 	offAirSource     = 8
-	logFile          = "thonkyBoi.log"
 	configFile       = "config.json"
 )
 
@@ -44,6 +43,8 @@ type configAutoNews struct {
 }
 
 type thonkyConfigBoi struct {
+	LogFile          string           `json:"logFile"`
+	APIKey           string           `json:"apiKey"`
 	NewsOnJukebox    bool             `json:"newsOnJukebox"`
 	OBShows          []int            `json:"obShows"`
 	AutonewsRequests []configAutoNews `json:"autonewsRequests"`
@@ -191,10 +192,23 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 func main() {
 
 	/*
+		Get Config
+	*/
+
+	configFile, err := os.Open(configFile)
+	if err != nil {
+		panic(err)
+	}
+	defer configFile.Close()
+	byteValue, _ := ioutil.ReadAll(configFile)
+	var config thonkyConfigBoi
+	json.Unmarshal(byteValue, &config)
+
+	/*
 		Start Logging
 	*/
 
-	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -207,16 +221,7 @@ func main() {
 		API Calling Stuff
 	*/
 
-	configFile, err := os.Open(configFile)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer configFile.Close()
-	byteValue, _ := ioutil.ReadAll(configFile)
-	var config thonkyConfigBoi
-	json.Unmarshal(byteValue, &config)
-
-	session, err := myradio.NewSession("*****") // Timelord Key
+	session, err := myradio.NewSession(config.APIKey)
 	if err != nil {
 		log.Println("Error Starting API Session - Will Exit and Not Issue SEL Commands")
 		log.Fatal(err)
