@@ -24,7 +24,7 @@ const (
 
 type wsconnection struct {
 	Timeslotid    int  `json:"timeslotid"`
-	AutoNewsStart bool `json:"autoNewsStart"`
+	AutoNewsStart bool `json:"autoNewsBeginning"`
 	AutoNewsEnd   bool `json:"autoNewsEnd"`
 }
 
@@ -80,7 +80,7 @@ func checkManualNews(timeslotID uint64, part string, wsData webStudioData, confi
 
 // Is this time coming up soon
 func checkTimeSoon(t time.Time) bool {
-	return t.Add(time.Duration(-59) * time.Minute).Before(time.Now())
+	return t.Add(time.Duration(-2) * time.Minute).Before(time.Now())
 }
 
 func checkOB(timeslotID uint64, config thonkyConfigBoi) bool {
