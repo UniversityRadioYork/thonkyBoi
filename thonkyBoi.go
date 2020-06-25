@@ -208,12 +208,6 @@ func main() {
 		Start Logging
 	*/
 
-	file, err := os.OpenFile(config.LogFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer file.Close()
-	log.SetOutput(file)
 	log.Println("Software Startup for Upcoming Transition")
 	log.Println("Starting API Session and Getting Data")
 
