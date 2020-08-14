@@ -312,21 +312,21 @@ func main() {
 	log.Println("Executing 59:45")
 	if commands[0] != 0 {
 		log.Printf("Exec: sel %s\n", strconv.Itoa(commands[0]))
-		exec.Command("sel", strconv.Itoa(commands[0]))
+		exec.Command("sel", strconv.Itoa(commands[0])).Run()
 	}
 
 	time.Sleep(15 * time.Second)
 	log.Println("Executing 00:00")
 	if commands[1] != 0 {
 		log.Printf("Exec: sel %s\n", strconv.Itoa(commands[1]))
-		exec.Command("sel", strconv.Itoa(commands[1]))
+		exec.Command("sel", strconv.Itoa(commands[1])).Run()
 	}
 
 	time.Sleep(122 * time.Second)
 	log.Println("Executing 02:02")
 	if commands[2] != 0 {
 		log.Printf("Exec: sel %s\n", strconv.Itoa(commands[2]))
-		exec.Command("sel", strconv.Itoa(commands[2]))
+		exec.Command("sel", strconv.Itoa(commands[2])).Run()
 	}
 
 	/*
@@ -342,7 +342,7 @@ func main() {
 		log.Println("Checking for Live Show")
 		if selInfo.Studio == wsSource {
 			log.Println("No Live Show - Exec: sel ", jukeboxSource)
-			exec.Command("sel", strconv.Itoa(jukeboxSource))
+			exec.Command("sel", strconv.Itoa(jukeboxSource)).Run()
 		} else {
 			log.Printf("Live Show - SEL %v\n", selInfo.Studio)
 		}
