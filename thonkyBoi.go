@@ -26,6 +26,7 @@ type wsconnection struct {
 	Timeslotid    int  `json:"timeslotid"`
 	AutoNewsStart bool `json:"autoNewsBeginning"`
 	AutoNewsEnd   bool `json:"autoNewsEnd"`
+	SelSource     int  `json:"selSource"`
 }
 
 type wspayload struct {
@@ -82,10 +83,17 @@ func checkTimeSoon(t time.Time) bool {
 	return t.Add(time.Duration(-2) * time.Minute).Before(time.Now())
 }
 
-func checkOB(timeslotID uint64, config thonkyConfigBoi) bool {
+func checkOB(timeslotID uint64, config thonkyConfigBoi, wsData webStudioData) bool {
 	for _, val := range config.OBShows {
 		if val == int(timeslotID) {
 			return true
+		}
+	}
+	for _, val := range wsData.Payload.Connections {
+		if val.Timeslotid == int(timeslotID) {
+			if val.SelSource == obSource {
+				return true
+			}
 		}
 	}
 	return false
@@ -95,7 +103,9 @@ func checkOB(timeslotID uint64, config thonkyConfigBoi) bool {
 func checkWS(timeslotID uint64, wsData webStudioData) bool {
 	for _, val := range wsData.Payload.Connections {
 		if val.Timeslotid == int(timeslotID) {
-			return true
+			if val.SelSource == wsSource || val.SelSource == 0 { // Or 0 cause backwards compatability with some older stuff
+				return true
+			}
 		}
 	}
 	return false
@@ -112,8 +122,8 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 
 	var obNext bool
 
-	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id, config)) ||
-		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id, config))
+	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id, config, wsData)) ||
+		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id, config, wsData))
 
 	var wsNext bool
 

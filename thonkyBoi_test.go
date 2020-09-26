@@ -770,3 +770,39 @@ func TestWSWSNoAutonewsBoth(t *testing.T) {
 		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
 	}
 }
+
+// Tests for Determining OB either from WS or OB Config
+
+func TestJukeboxOBFromConfig(t *testing.T) {
+	expectedCommands := [3]int{5, 5, 4}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 0, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 2, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{}}}
+	var currentSel int = jukeboxSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{2}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsEnd: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
+
+func TestJukeboxOBFromWebStudio(t *testing.T) {
+	expectedCommands := [3]int{5, 5, 4}
+	expectedStudioCheck := false
+	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
+		Current: myradio.Show{Id: 0, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+		Next:    myradio.Show{Id: 2, StartTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
+	}
+	var wsData webStudioData = webStudioData{Payload: wspayload{Connections: []wsconnection{wsconnection{Timeslotid: 2, AutoNewsStart: true, AutoNewsEnd: true, SelSource: 4}}}}
+	var currentSel int = jukeboxSource
+	var config thonkyConfigBoi = thonkyConfigBoi{NewsOnJukebox: true, OBShows: []int{}, AutonewsRequests: []configAutoNews{configAutoNews{TimeslotID: 1, AutoNewsEnd: false}}}
+	actualCommands, actualStudioCheck := Decisioning(&timeslotInfo, wsData, currentSel, config)
+
+	if (expectedCommands != actualCommands) || (expectedStudioCheck != actualStudioCheck) {
+		t.Errorf("Test Failed: Expected: %v, %v, Got: %v, %v", expectedCommands, expectedStudioCheck, actualCommands, actualStudioCheck)
+	}
+}
