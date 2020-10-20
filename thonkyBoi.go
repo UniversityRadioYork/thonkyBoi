@@ -26,7 +26,7 @@ type wsconnection struct {
 	Timeslotid    int  `json:"timeslotid"`
 	AutoNewsStart bool `json:"autoNewsBeginning"`
 	AutoNewsEnd   bool `json:"autoNewsEnd"`
-	SelSource     int  `json:"selSource"`
+	SelSource     int  `json:"sourceid"`
 }
 
 type wspayload struct {
