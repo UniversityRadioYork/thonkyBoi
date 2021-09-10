@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/UniversityRadioYork/myradio-go"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,6 +9,8 @@ import (
 	"os/exec"
 	"strconv"
 	"time"
+
+	"github.com/UniversityRadioYork/myradio-go"
 )
 
 const (
@@ -115,20 +116,16 @@ func checkWS(timeslotID uint64, wsData webStudioData) bool {
 func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, currentSel int, config thonkyConfigBoi) ([3]int, bool) {
 	// This stuff below has nice names...that's all I have to say
 
-	var jukeboxNext bool
-
-	jukeboxNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && timeslotInfo.Next.Id == 0) ||
+	jukeboxNext := (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && timeslotInfo.Next.Id == 0) ||
 		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && timeslotInfo.Current.Id == 0)
 
-	var obNext bool
-
-	obNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id, config, wsData)) ||
+	obNext := (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkOB(timeslotInfo.Next.Id, config, wsData)) ||
 		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkOB(timeslotInfo.Current.Id, config, wsData))
 
-	var wsNext bool
-
-	wsNext = (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkWS(timeslotInfo.Next.Id, wsData)) ||
+	wsNext := (checkTimeSoon(timeslotInfo.Next.StartTime.Local()) && checkWS(timeslotInfo.Next.Id, wsData)) ||
 		(!checkTimeSoon(timeslotInfo.Current.EndTime.Local()) && checkWS(timeslotInfo.Current.Id, wsData))
+
+	studiosNext := !jukeboxNext && !obNext && !wsNext
 
 	var manualNews [2]bool
 
@@ -154,7 +151,7 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 		59:45 Transition
 	*/
 
-	if (currentSel == jukeboxSource || currentSel == obSource) && (manualNews == [2]bool{false, false}) {
+	if ((currentSel == jukeboxSource && !studiosNext) || currentSel == obSource) && (manualNews == [2]bool{false, false}) {
 		commands[0] = wsSource
 	}
 
@@ -173,10 +170,6 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 		} else if manualNews[1] {
 			commands[1] = obSource
 		}
-	} else if jukeboxNext {
-		if !manualNews[0] {
-			commands[1] = wsSource
-		}
 	}
 
 	/*
@@ -185,13 +178,13 @@ func Decisioning(timeslotInfo *myradio.CurrentAndNext, wsData webStudioData, cur
 
 	var needToCheck bool
 
-	if jukeboxNext {
+	if jukeboxNext && currentSel != studioRedSource && currentSel != studioBlueSource {
 		commands[2] = jukeboxSource
 	} else if obNext {
 		commands[2] = obSource
 	} else if wsNext {
 		commands[2] = wsSource
-	} else {
+	} else if studiosNext {
 		needToCheck = true
 	}
 

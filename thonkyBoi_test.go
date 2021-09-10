@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/UniversityRadioYork/myradio-go"
 	"testing"
 	"time"
+
+	"github.com/UniversityRadioYork/myradio-go"
 )
 
 func TestStudiosStudiosNoAutonews(t *testing.T) {
@@ -24,7 +25,7 @@ func TestStudiosStudiosNoAutonews(t *testing.T) {
 }
 
 func TestStudiosJukeboxAutonews(t *testing.T) {
-	expectedCommands := [3]int{0, 5, 3}
+	expectedCommands := [3]int{0, 0, 0}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 1, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
@@ -41,7 +42,7 @@ func TestStudiosJukeboxAutonews(t *testing.T) {
 }
 
 func TestStudiosJukeboxNoAutonews(t *testing.T) {
-	expectedCommands := [3]int{0, 0, 3}
+	expectedCommands := [3]int{0, 0, 0}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 1, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
@@ -160,7 +161,7 @@ func TestStudiosWSNoAutonewsBoth(t *testing.T) {
 }
 
 func TestJukeboxStudiosAutonews(t *testing.T) {
-	expectedCommands := [3]int{5, 0, 0}
+	expectedCommands := [3]int{0, 0, 0}
 	expectedStudioCheck := true
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 0, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
@@ -194,7 +195,7 @@ func TestJukeboxStudiosNoAutonews(t *testing.T) {
 }
 
 func TestJukeboxJukeboxAutonews(t *testing.T) {
-	expectedCommands := [3]int{5, 5, 3}
+	expectedCommands := [3]int{5, 0, 3}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 0, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
@@ -364,7 +365,7 @@ func TestOBStudiosNoAutonewsBoth(t *testing.T) {
 }
 
 func TestOBJukeboxAutonews(t *testing.T) {
-	expectedCommands := [3]int{5, 5, 3}
+	expectedCommands := [3]int{5, 0, 3}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 2, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
@@ -602,7 +603,7 @@ func TestWSStudiosNoAutonewsBoth(t *testing.T) {
 }
 
 func TestWSJukeboxAutonews(t *testing.T) {
-	expectedCommands := [3]int{0, 5, 3}
+	expectedCommands := [3]int{0, 0, 3}
 	expectedStudioCheck := false
 	var timeslotInfo myradio.CurrentAndNext = myradio.CurrentAndNext{
 		Current: myradio.Show{Id: 1, EndTime: myradio.Time{Time: time.Now().Add(time.Minute)}},
