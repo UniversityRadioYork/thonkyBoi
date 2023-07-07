@@ -258,7 +258,8 @@ func main() {
 
 	if currentSel == offAirSource {
 		// Off Air
-		log.Printf("Currently Off-Air - No SEL Commands to Issue\n\n")
+		log.Printf("Currently Off-Air - Will use FM selector\n\n")
+		fmJukeboxNews()
 		return
 	}
 
